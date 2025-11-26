@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+
+{% block content %}
+  <h1>GitHub PR Dashboard</h1>
+
+  <p class="small">
+    Last refresh: <span id="last-refresh">{{ now }}</span>
+  </p>
+
+  <div
+    id="pr-table-container"
+    hx-get="/fragments/pr-table"
+    hx-trigger="load, every 10s"
+    hx-swap="innerHTML"
+  >
+    {% include "_pr_table.html" %}
+  </div>
+{% endblock %}

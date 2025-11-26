@@ -1,0 +1,24 @@
+[project]
+name = "github-pr-tracker"
+version = "0.1.0"
+description = "Local GitHub PR dashboard"
+requires-python = ">=3.13"
+
+dependencies = [
+    "fastapi",
+    "uvicorn[standard]",
+    "jinja2",
+    "pydantic-settings",
+    "sqlalchemy[asyncio]",
+    "aiosqlite",
+    "gql[all]",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest",
+    "httpx",
+]
+
+[tool.uv]
+dev-dependencies = ["pytest", "httpx"]

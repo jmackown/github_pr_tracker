@@ -1,0 +1,96 @@
+<div class="board">
+  {% for title, items in groups %}
+    <section class="board-section">
+      <header class="section-header">
+        <h2>
+          {{ title }}{% if items|length is not none %} ({{ items|length }}){% endif %}
+        </h2>
+      </header>
+
+      {% if items %}
+        <div class="grid">
+          {% for pr in items %}
+
+            {# Determine strip colour #}
+            {% set strip = "status-open" %}
+            {% if pr.is_draft %}
+                {% set strip = "status-draft" %}
+            {% elif pr.state == "MERGED" %}
+                {% set strip = "status-merged" %}
+            {% elif pr.ci_summary and "FAILED" in pr.ci_summary %}
+                {% set strip = "status-failed" %}
+            {% endif %}
+
+            <div class="card {% if pr.is_mine %}mine{% endif %}">
+              <div class="status-strip {{ strip }}"></div>
+
+              <div class="title">
+                <a href="{{ pr.url }}" style="color:#e8ecf0; text-decoration:none;" target="_blank">
+                  {{ pr.title }}
+                </a>
+                {% if pr.is_draft %}
+                  <span class="pill pill-draft">Draft</span>
+                {% endif %}
+              </div>
+
+              <div class="meta">
+                <div class="avatar">
+                  <img src="https://github.com/{{ pr.author }}.png" alt="">
+                </div>
+                <div>
+                  <strong>{{ pr.author }}</strong><br>
+                  <span>{{ pr.repo_owner }}/{{ pr.repo_name }} #{{ pr.number }}</span>
+                </div>
+              </div>
+
+              <div class="meta">
+                <span>Updated: {{ pr.updated_at }}</span>
+              </div>
+              {% if pr.state == "MERGED" %}
+                <div class="meta">
+                  <span>Merged: {{ pr.merged_at or pr.updated_at }}</span>
+                </div>
+              {% endif %}
+
+              <div class="meta badges-row">
+                {% if pr.has_conflicts %}
+                  <span class="badge badge-conflict">Conflicts</span>
+                {% endif %}
+
+                {% if pr.review_status %}
+                  <span class="badge">
+                    {{ pr.review_status }}
+                  </span>
+                {% endif %}
+
+                {% if pr.ci_summary %}
+                  {% set ci = pr.ci_summary.lower() %}
+                  <span class="badge
+                    {% if 'failed' in ci %}ci-failed
+                    {% elif 'pending' in ci or 'running' in ci %}ci-running
+                    {% else %}ci-passed{% endif %}
+                  ">
+                    {{ pr.ci_summary }}
+                  </span>
+                {% endif %}
+
+                {% if pr.state == "MERGED" and pr.merge_ci_summary %}
+                  {% set mci = pr.merge_ci_summary.lower() %}
+                  <span class="badge
+                    {% if 'failed' in mci %}ci-failed
+                    {% elif 'pending' in mci or 'running' in mci %}ci-running
+                    {% else %}ci-passed{% endif %}
+                  ">
+                    merge: {{ pr.merge_ci_summary }}
+                  </span>
+                {% endif %}
+              </div>
+
+            </div>
+
+          {% endfor %}
+        </div>
+      {% endif %}
+    </section>
+  {% endfor %}
+</div>

@@ -1,0 +1,11 @@
+
+.env
+.idea/*
+
+app/__pycache__/
+
+tests/__pycache__/
+
+prdash.db
+
+prdash.db-journal
