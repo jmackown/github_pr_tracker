@@ -32,6 +32,10 @@ query RepoPRs($owner: String!, $name: String!, $first: Int!) {
         author { login }
         isDraft
         state
+        additions
+        deletions
+        changedFiles
+        commitTotals: commits { totalCount }
         mergeStateStatus
         updatedAt
         mergedAt
@@ -55,7 +59,7 @@ query RepoPRs($owner: String!, $name: String!, $first: Int!) {
             state
           }
         }
-        commits(last: 1) {
+        commitsWithStatus: commits(last: 1) {
           nodes {
             commit {
               oid
@@ -115,6 +119,10 @@ query SinglePR($owner: String!, $name: String!, $number: Int!) {
       author { login }
       isDraft
       state
+      additions
+      deletions
+      changedFiles
+        commitTotals: commits { totalCount }
       mergeStateStatus
       updatedAt
       mergedAt
@@ -136,7 +144,7 @@ query SinglePR($owner: String!, $name: String!, $number: Int!) {
             }
           }
         }
-      commits(last: 1) {
+      commitsWithStatus: commits(last: 1) {
         nodes {
           commit {
             oid
@@ -196,7 +204,7 @@ def summarise_commit_rollup(rollup: Dict[str, Any] | None, label: str = "checks"
 
 
 def summarise_ci(node: Dict[str, Any]) -> str:
-    commits = node.get("commits", {}).get("nodes", [])
+    commits = node.get("commitsWithStatus", {}).get("nodes", [])
     if not commits:
         return "no commits"
 
@@ -212,6 +220,32 @@ def summarise_merge_ci(node: Dict[str, Any]) -> str | None:
 
     rollup = merge_commit.get("statusCheckRollup")
     return summarise_commit_rollup(rollup, label="merge checks")
+
+
+def compute_size_tier(node: Dict[str, Any]) -> int:
+    additions = node.get("additions") or 0
+    deletions = node.get("deletions") or 0
+    files = node.get("changedFiles") or 0
+    commits = (
+        node.get("commitTotals", {}).get("totalCount")
+        or node.get("commits", {}).get("totalCount")
+        or 0
+    )
+
+    churn = additions + deletions
+    score = (churn * 0.01) + (files * 0.2) + (commits * 0.05)
+
+    if score < 2:
+        return 0
+    if score < 4:
+        return 1
+    if score < 7:
+        return 2
+    if score < 11:
+        return 3
+    if score < 18:
+        return 4
+    return 5
 
 
 def summarise_reviews(node: Dict[str, Any]) -> str:
@@ -258,6 +292,8 @@ def map_pr_nodes(owner: str, name: str, nodes: List[Dict[str, Any]]) -> List[Dic
 
         merge_state = (node.get("mergeStateStatus") or "").upper()
         has_conflicts = (merge_state == "DIRTY")
+        size_tier = compute_size_tier(node)
+        commit_nodes = node.get("commitsWithStatus", {})
 
         mapped.append(
             {
@@ -273,13 +309,14 @@ def map_pr_nodes(owner: str, name: str, nodes: List[Dict[str, Any]]) -> List[Dic
                 "ci_summary": summarise_ci(node),
                 "merge_ci_summary": summarise_merge_ci(node),
                 "last_commit_sha": (
-                    node.get("commits", {})
+                    commit_nodes
                     .get("nodes", [{}])[0]
                     .get("commit", {})
                     .get("oid")
                 ),
                 "merge_commit_sha": merge_commit.get("oid"),
                 "has_conflicts": has_conflicts,
+                "size_tier": size_tier,
                 "updated_at": parse_iso_dt(node["updatedAt"]),
                 "merged_at": merged_at,
                 "raw": node,

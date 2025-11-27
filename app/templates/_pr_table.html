@@ -23,9 +23,14 @@
 
             <div class="card {% if pr.is_mine %}mine{% endif %}">
               <div class="status-strip {{ strip }}"></div>
+              {% set tier = pr.size_tier or 0 %}
+              <div class="size-badge size-tier-{{ tier }}">
+                {% set labels = ["trivial","small","medium","large","very large","massive"] %}
+                {{ labels[tier] if tier < labels|length else "massive+" }}
+              </div>
 
               <div class="title">
-                <a href="{{ pr.url }}" style="color:#e8ecf0; text-decoration:none;" target="_blank">
+                <a class="pr-link" href="{{ pr.url }}" target="_blank">
                   {{ pr.title }}
                 </a>
                 {% if pr.is_draft %}

@@ -36,6 +36,7 @@ class PullRequest(Base):
     last_commit_sha: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     merge_commit_sha: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     has_conflicts: Mapped[bool] = mapped_column(Boolean, default=False)
+    size_tier: Mapped[int] = mapped_column(Integer, default=0)
 
     is_mine: Mapped[bool] = mapped_column(Boolean, default=False)
 

@@ -40,6 +40,7 @@ async def upsert_pr(session: AsyncSession, data: Dict) -> None:
         existing.last_commit_sha = data["last_commit_sha"]
         existing.merge_commit_sha = data.get("merge_commit_sha")
         existing.has_conflicts = data.get("has_conflicts", False)
+        existing.size_tier = data.get("size_tier", 0)
         existing.updated_at = data["updated_at"]
         existing.merged_at = data.get("merged_at")
         existing.last_synced_at = datetime.utcnow()
@@ -62,6 +63,7 @@ async def upsert_pr(session: AsyncSession, data: Dict) -> None:
                 last_commit_sha=data["last_commit_sha"],
                 merge_commit_sha=data.get("merge_commit_sha"),
                 has_conflicts=data.get("has_conflicts", False),
+                size_tier=data.get("size_tier", 0),
                 is_mine=is_mine,
                 updated_at=data["updated_at"],
                 merged_at=data.get("merged_at"),
