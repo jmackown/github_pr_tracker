@@ -11,7 +11,7 @@ A simple FastAPI + HTMX dashboard that shows PRs you authored or need to review,
    cd github_pr_tracker
    ```
 3. Install deps (creates a .venv): `uv sync`
-4. Configure `.env` (all keys are prefixed `PRDASH_`):
+4. Configure `.env` (all keys are prefixed `PRDASH_`; see `.env.example`):
    ```
    PRDASH_GITHUB_TOKEN=ghp_xxx
    PRDASH_GITHUB_USERNAME=your-username
@@ -20,6 +20,7 @@ A simple FastAPI + HTMX dashboard that shows PRs you authored or need to review,
    PRDASH_POLL_INTERVAL_SECONDS=15
    ```
 5. Run the server (dev): `uv run uvicorn app.main:app --reload`
+   or use the CLI: `uv run prdash --reload`
 6. Open http://127.0.0.1:8000
 
 ## How it works
@@ -48,7 +49,7 @@ PYTHONPATH=. uv run pytest
 
 ## Schema note
 
-`prdash.db` is auto-created on startup. If you pull new schema changes, drop the file or `ALTER TABLE` to add new columns (e.g., merge metadata, conflict flag, size tier, jira fields).
+`prdash.db` is auto-created on startup. It is no longer auto-deleted; if you pull new schema changes, drop the file or `ALTER TABLE` to add new columns (e.g., merge metadata, conflict flag, size tier, jira fields). If you need a clean slate, set `PRDASH_DB_RESET_ON_START=true` (only for local/testing).
 
 ## Optional Jira integration
 
@@ -57,5 +58,18 @@ If you want Jira status badges, add these to `.env`:
 PRDASH_JIRA_BASE_URL=https://your-domain.atlassian.net
 PRDASH_JIRA_EMAIL=you@example.com
 PRDASH_JIRA_API_TOKEN=atlassian-api-token
+# Optional: limit matching to certain projects (comma-separated prefixes, e.g., PLAN,ABC)
+PRDASH_JIRA_PROJECT_PREFIXES=
+# Optional: expected statuses per lane (comma-separated); defaults shown
+PRDASH_JIRA_STATUS_NEEDS_REVIEW=In Review
+PRDASH_JIRA_STATUS_DRAFT=In Development
+PRDASH_JIRA_STATUS_REVIEWED=In Review
+PRDASH_JIRA_STATUS_MERGED=Ready for QA,QA,In QA,Released,Done,Closed,Production
 ```
 The title must contain a ticket key (e.g., `ABC-123`); Jira calls are skipped entirely if these aren’t set.
+
+## Install/run for others
+
+- Clone and `uv sync`, then `uv run prdash --reload` (or `uv run uvicorn app.main:app --reload`).
+- Package entrypoint: `prdash` is defined in `pyproject.toml`, so `pip install .` then `prdash` works too.
+- Config via `.env` (see `.env.example`). Jira is optional; the app runs fine without it.

@@ -95,24 +95,19 @@
                 {% set status_lower = pr.jira_status.lower() %}
                 {% if title == "My PRs that need review" %}
                   {% if pr.is_draft %}
-                    {% set expected_jira = ["In Development"] %}
+                    {% set expected_jira = settings.jira_status_list(settings.jira_status_draft, ["In Development"]) %}
                   {% else %}
-                    {% set expected_jira = ["In Review"] %}
+                    {% set expected_jira = settings.jira_status_list(settings.jira_status_needs_review, ["In Review"]) %}
                   {% endif %}
                 {% elif title == "My PRs that have been reviewed" %}
-                  {% set expected_jira = ["In Review"] %}
+                  {% set expected_jira = settings.jira_status_list(settings.jira_status_reviewed, ["In Review"]) %}
                 {% elif title.startswith("Merged PRs") %}
-                  {% set expected_jira = ["Ready for QA"] %}
+                  {% set expected_jira = settings.jira_status_list(settings.jira_status_merged, ["Ready for QA","QA","In QA","Released","Done","Closed","Production"]) %}
                 {% endif %}
 
                 {% if expected_jira %}
                   {% set expected_lower = expected_jira | map('lower') | list %}
-                  {% if title.startswith("Merged PRs") %}
-                    {% set allowed_merged = ["ready for qa","qa","in qa","ready for release","ready for prod","released","production","done","closed"] %}
-                    {% set jira_ok = status_lower in allowed_merged %}
-                  {% else %}
-                    {% set jira_ok = status_lower in expected_lower %}
-                  {% endif %}
+                  {% set jira_ok = status_lower in expected_lower %}
                 {% endif %}
               {% endif %}
 

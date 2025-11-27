@@ -2,6 +2,7 @@ import asyncio
 import json
 import re
 import urllib.request
+import urllib.error
 from base64 import b64encode
 from typing import Optional
 
@@ -14,7 +15,9 @@ JIRA_KEY_RE = re.compile(r"\b([A-Z][A-Z0-9]+)[\s-]?(\d+)\b", re.IGNORECASE)
 def parse_jira_key(text: str) -> Optional[str]:
     match = JIRA_KEY_RE.search(text or "")
     if match:
-        return f"{match.group(1).upper()}-{match.group(2)}"
+        key = f"{match.group(1).upper()}-{match.group(2)}"
+        if _is_allowed_key(key):
+            return key
     return None
 
 
@@ -22,7 +25,22 @@ def parse_jira_keys(text: str) -> list[str]:
     if not text:
         return []
     keys = {f"{m[0].upper()}-{m[1]}" for m in JIRA_KEY_RE.findall(text)}
-    return list(keys)
+    return [k for k in keys if _is_allowed_key(k)]
+
+
+def _allowed_prefixes() -> list[str]:
+    prefixes = settings.jira_project_prefixes
+    if not prefixes:
+        return []
+    return [p.strip().upper() for p in prefixes.split(",") if p.strip()]
+
+
+def _is_allowed_key(key: str) -> bool:
+    allowed = _allowed_prefixes()
+    if not allowed:
+        return True
+    prefix = key.split("-", 1)[0]
+    return prefix in allowed
 
 
 async def fetch_jira_issue(key: str) -> Optional[dict]:
@@ -47,16 +65,27 @@ async def fetch_jira_issue(key: str) -> Optional[dict]:
 
     try:
         data = await asyncio.to_thread(_fetch)
-        payload = json.loads(data)
-        fields = payload.get("fields", {})
-        status = fields.get("status", {}).get("name")
-        summary = fields.get("summary")
-        return {
-            "key": key,
-            "status": status,
-            "summary": summary,
-            "url": f"{base}/browse/{key}",
-        }
+    except urllib.error.HTTPError as exc:
+        if exc.code == 404:
+            return {
+                "key": key,
+                "status": "not found",
+                "summary": None,
+                "url": f"{base}/browse/{key}",
+            }
+        print(f"[jira] error fetching {key}: {exc!r}")
+        return None
     except Exception as exc:  # noqa: BLE001
         print(f"[jira] error fetching {key}: {exc!r}")
         return None
+
+    payload = json.loads(data)
+    fields = payload.get("fields", {})
+    status = fields.get("status", {}).get("name")
+    summary = fields.get("summary")
+    return {
+        "key": key,
+        "status": status,
+        "summary": summary,
+        "url": f"{base}/browse/{key}",
+    }

@@ -69,7 +69,7 @@ SessionLocal = async_sessionmaker(
 
 async def init_db() -> None:
     url = make_url(settings.database_url)
-    if url.drivername.startswith("sqlite") and url.database:
+    if url.drivername.startswith("sqlite") and url.database and settings.db_reset_on_start:
         db_path = Path(url.database)
         if db_path.exists():
             db_path.unlink()

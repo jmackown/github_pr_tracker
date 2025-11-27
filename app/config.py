@@ -21,6 +21,13 @@ class Settings(BaseSettings):
     jira_base_url: str | None = None  # e.g. https://your-domain.atlassian.net
     jira_email: str | None = None
     jira_api_token: str | None = None
+    jira_project_prefixes: str | None = None  # comma-separated; optional filter
+    jira_status_needs_review: str | None = None  # comma-separated expected statuses
+    jira_status_draft: str | None = None
+    jira_status_reviewed: str | None = None
+    jira_status_merged: str | None = None
+
+    db_reset_on_start: bool = False  # set true to delete/recreate SQLite on startup
 
     model_config = SettingsConfigDict(
         env_file=".env",
@@ -56,6 +63,11 @@ class Settings(BaseSettings):
     @property
     def jira_enabled(self) -> bool:
         return bool(self.jira_base_url and self.jira_email and self.jira_api_token)
+
+    def jira_status_list(self, value: str | None, default: list[str]) -> list[str]:
+        if value is None:
+            return default
+        return [v.strip() for v in value.split(",") if v.strip()]
 
 
 settings = Settings()

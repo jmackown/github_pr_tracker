@@ -4,6 +4,8 @@ from datetime import datetime
 from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
+import click
+import uvicorn
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -92,3 +94,12 @@ async def load_pr_groups(session: AsyncSession):
     result = await session.execute(stmt)
     prs = result.scalars().all()
     return categorize_prs(prs)
+
+
+@click.command()
+@click.option("--host", default="127.0.0.1", show_default=True, help="Host to bind")
+@click.option("--port", default=8000, show_default=True, help="Port to bind")
+@click.option("--reload/--no-reload", default=False, show_default=True, help="Enable autoreload")
+def cli(host: str, port: int, reload: bool):
+    """Run the PR dashboard server."""
+    uvicorn.run("app.main:app", host=host, port=port, reload=reload)

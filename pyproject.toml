@@ -12,6 +12,7 @@ dependencies = [
     "sqlalchemy[asyncio]",
     "aiosqlite",
     "gql[all]",
+    "click",
 ]
 
 [project.optional-dependencies]
@@ -22,3 +23,6 @@ dev = [
 
 [tool.uv]
 dev-dependencies = ["pytest", "httpx"]
+
+[project.scripts]
+prdash = "app.main:cli"
