@@ -270,26 +270,27 @@
     margin: 0.25rem 0 0;
   }
 
-  .size-badge {
-    position: absolute;
-    top: 0.7rem;
-    right: 0.75rem;
-    background: var(--badge-bg);
-    border: 1px solid rgba(255,255,255,0.08);
-    border-radius: 999px;
-    padding: 0.18rem 0.6rem;
-    font-size: 0.7rem;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    color: var(--muted);
-  }
 
-  .size-tier-0 { background: rgba(74, 222, 128, 0.14); color: #bbf7d0; border-color: rgba(74, 222, 128, 0.4); }
-  .size-tier-1 { background: rgba(56, 189, 248, 0.14); color: #bae6fd; border-color: rgba(56, 189, 248, 0.4); }
-  .size-tier-2 { background: rgba(234, 179, 8, 0.18); color: #fef08a; border-color: rgba(234, 179, 8, 0.45); }
-  .size-tier-3 { background: rgba(249, 115, 22, 0.18); color: #fed7aa; border-color: rgba(249, 115, 22, 0.45); }
-  .size-tier-4 { background: rgba(239, 68, 68, 0.22); color: #fecdd3; border-color: rgba(239, 68, 68, 0.5); }
-  .size-tier-5 { background: rgba(127, 29, 29, 0.35); color: #fecdd3; border-color: rgba(127, 29, 29, 0.7); box-shadow: 0 0 12px rgba(127,29,29,0.4); }
+  /* Size sparkline */
+  .size-sparkline {
+    display: grid;
+    grid-template-columns: repeat(10, 1fr);
+    align-items: flex-end;
+    gap: 6px;
+    padding: 0.2rem 0;
+    margin: 0.35rem 0 0.25rem;
+  }
+  .size-spark-bar {
+    display: block;
+    width: 100%;
+    border-radius: 6px;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    background: rgba(255,255,255,0.08);
+  }
+  .size-spark-bar.filled { background: transparent; }
+  .size-spark-bar.muted { background: rgba(255,255,255,0.08); }
+  .size-spark-bar.last-filled { position: relative; }
+  }
 </style>
 
 </head>

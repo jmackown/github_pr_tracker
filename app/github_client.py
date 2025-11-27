@@ -248,6 +248,19 @@ def compute_size_tier(node: Dict[str, Any]) -> int:
     return 5
 
 
+def build_size_sparkline(node: Dict[str, Any]) -> list[float]:
+    additions = node.get("additions") or 0
+    deletions = node.get("deletions") or 0
+    files = node.get("changedFiles") or 0
+
+    churn = additions + deletions
+    size_signal = churn + (files * 20)
+
+    norm = min(size_signal, 2000) / 2000  # cap at "wow stop reviewing this"
+    weights = [i / 10 for i in range(1, 11)]  # 0.1 → 1.0
+    return [norm * w for w in weights]
+
+
 def summarise_reviews(node: Dict[str, Any]) -> str:
     reviews = node.get("reviews", {}).get("nodes", [])
     dismissed_present = any(r.get("state") == "DISMISSED" for r in reviews)
@@ -294,6 +307,9 @@ def map_pr_nodes(owner: str, name: str, nodes: List[Dict[str, Any]]) -> List[Dic
         has_conflicts = (merge_state == "DIRTY")
         size_tier = compute_size_tier(node)
         commit_nodes = node.get("commitsWithStatus", {})
+        size_sparkline = build_size_sparkline(node)
+        raw_data = dict(node)
+        raw_data["size_sparkline"] = size_sparkline
 
         mapped.append(
             {
@@ -319,7 +335,7 @@ def map_pr_nodes(owner: str, name: str, nodes: List[Dict[str, Any]]) -> List[Dic
                 "size_tier": size_tier,
                 "updated_at": parse_iso_dt(node["updatedAt"]),
                 "merged_at": merged_at,
-                "raw": node,
+                "raw": raw_data,
                 "requested_reviewers": requested,
                 "requested_review_teams": requested_teams,
             }

@@ -23,12 +23,6 @@
 
             <div class="card {% if pr.is_mine %}mine{% endif %}">
               <div class="status-strip {{ strip }}"></div>
-              {% set tier = pr.size_tier or 0 %}
-              <div class="size-badge size-tier-{{ tier }}">
-                {% set labels = ["trivial","small","medium","large","very large","massive"] %}
-                {{ labels[tier] if tier < labels|length else "massive+" }}
-              </div>
-
               <div class="title">
                 <a class="pr-link" href="{{ pr.url }}" target="_blank">
                   {{ pr.title }}
@@ -54,6 +48,44 @@
               {% if pr.state == "MERGED" %}
                 <div class="meta">
                   <span>Merged: {{ pr.merged_at or pr.updated_at }}</span>
+                </div>
+              {% endif %}
+
+              {% set size_points = pr.raw.get("size_sparkline", []) %}
+              {% if size_points %}
+                {% set max_val = size_points|max %}
+                {% set total = size_points|length %}
+                {% set fill_count = ((max_val * total) + 0.999) | int %}
+                {% if max_val > 0 and fill_count < 1 %}{% set fill_count = 1 %}{% endif %}
+                {% if fill_count > total %}{% set fill_count = total %}{% endif %}
+                {% set last_idx = fill_count - 1 %}
+                <div class="size-sparkline">
+                  {% for val in size_points %}
+                    {% set idx = loop.index0 %}
+                    {% set filled = idx <= last_idx and max_val > 0 %}
+                    {% set is_last = idx == last_idx and filled %}
+                    {% set hue = 120 - (120 * val) %}
+                    {% set height = 6 + (val * 12) %}
+                    {% set alpha = 0.6 + (val * 0.4) %}
+                    {% set glow = 6 + val * 10 %}
+                    {% set fade = 0.15 + ((total - idx) / total) * 0.12 %}
+                    {% set muted_opacity = fade if idx > last_idx else 0.55 %}
+                    <span
+                      class="size-spark-bar {% if filled %}filled{% else %}muted{% endif %} {% if is_last %}last-filled{% endif %}"
+                      style="
+                        height: {{ '%.1f' % height }}px;
+                        {% if filled %}
+                          background: linear-gradient(180deg, hsla({{ '%.0f' % hue }}, 80%, 60%, {{ '%.2f' % alpha }}), hsla({{ '%.0f' % hue }}, 80%, 50%, {{ '%.2f' % (alpha + 0.2) }}));
+                          opacity: {{ '%.2f' % (0.6 + val * 0.4) }};
+                          {% if is_last %}
+                            box-shadow: 0 0 {{ '%.1f' % glow }}px hsla({{ '%.0f' % hue }}, 80%, 55%, {{ '%.2f' % (0.35 + val * 0.35) }});
+                          {% endif %}
+                        {% else %}
+                          opacity: {{ '%.2f' % muted_opacity }};
+                        {% endif %}
+                      "
+                    ></span>
+                  {% endfor %}
                 </div>
               {% endif %}
 
