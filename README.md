@@ -4,24 +4,27 @@ A simple FastAPI + HTMX dashboard that shows PRs you authored or need to review,
 
 ## Quickstart
 
-1. Install uv (fast Python package/venv manager): see https://docs.astral.sh/uv/getting-started/
-2. Clone and enter the repo:
+1) Install uv (fast Python package/venv manager): see https://docs.astral.sh/uv/getting-started/
+2) Clone and enter the repo:
    ```bash
    git clone <repo-url>
    cd github_pr_tracker
    ```
-3. Install deps (creates a .venv): `uv sync`
-4. Configure `.env` (all keys are prefixed `PRDASH_`; see `.env.example`):
+3) Install deps (creates a .venv): `uv sync`
+4) Copy config and fill non-sensitive defaults:
+   ```bash
+   cp config.example.yml config.yml
+   # edit config.yml with your username, tracked repos, etc.
    ```
+5) Set secrets in `.env` (tokens only; env wins over config file):
+   ```bash
+   PRDASH_CONFIG_FILE=./config.yml
    PRDASH_GITHUB_TOKEN=ghp_xxx
-   PRDASH_GITHUB_USERNAME=your-username
-   PRDASH_TRACKED_REPOS=owner/repo,owner/repo2
-   PRDASH_WATCHED_PRS=owner/repo#123
-   PRDASH_POLL_INTERVAL_SECONDS=15
+   PRDASH_JIRA_API_TOKEN=atlassian-token   # optional
    ```
-5. Run the server (dev): `uv run uvicorn app.main:app --reload`
-   or use the CLI: `uv run prdash --reload`
-6. Open http://127.0.0.1:8000
+   Other settings in `.env` are optional; see `.env.example` for keys.
+6) Run the server: `uv run prdash --reload` (or `uv run uvicorn app.main:app --reload`)
+7) Open http://127.0.0.1:8000
 
 ## How it works
 

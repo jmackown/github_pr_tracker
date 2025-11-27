@@ -1,0 +1,14 @@
+github_username: your-username
+tracked_repos: owner/repo,owner/repo2
+watched_prs: owner/repo#123
+poll_interval_seconds: 15
+db_reset_on_start: false
+
+# Jira (optional)
+jira_base_url: https://your-domain.atlassian.net
+jira_email: you@example.com
+jira_project_prefixes: ""
+jira_status_needs_review: In Review
+jira_status_draft: In Development
+jira_status_reviewed: In Review
+jira_status_merged: Ready for QA,QA,In QA,Released,Done,Closed,Production

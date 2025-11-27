@@ -10,6 +10,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from .db import SessionLocal, init_db, PullRequest
+from .config import settings
 from .polling import poll_loop
 
 app = FastAPI()
@@ -33,7 +34,7 @@ async def index(request: Request):
 
     return templates.TemplateResponse(
         "index.html",
-        {"request": request, "groups": groups, "now": datetime.utcnow()},
+        {"request": request, "groups": groups, "now": datetime.utcnow(), "settings": settings},
     )
 
 
@@ -44,7 +45,7 @@ async def pr_table(request: Request):
 
     return templates.TemplateResponse(
         "_pr_table.html",
-        {"request": request, "groups": groups, "now": datetime.utcnow()},
+        {"request": request, "groups": groups, "now": datetime.utcnow(), "settings": settings},
     )
 
 

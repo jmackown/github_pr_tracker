@@ -9,3 +9,7 @@ tests/__pycache__/
 prdash.db
 
 prdash.db-journal
+
+config.yml
+
+uv.lock

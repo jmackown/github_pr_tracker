@@ -1,9 +1,13 @@
+import os
+from pathlib import Path
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from typing import List
 
 
 class Settings(BaseSettings):
     """App configuration loaded from environment / .env."""
+
+    config_file: str | None = None  # optional path to YAML/JSON
 
     github_token: str
     github_username: str
@@ -33,7 +37,7 @@ class Settings(BaseSettings):
         env_file=".env",
         env_prefix="PRDASH_",
         extra="ignore",
-    )
+        )
 
     def repo_list(self) -> List[tuple[str, str]]:
         if not self.tracked_repos:
@@ -70,4 +74,15 @@ class Settings(BaseSettings):
         return [v.strip() for v in value.split(",") if v.strip()]
 
 
-settings = Settings()
+def build_settings() -> Settings:
+    # Load optional config file for non-sensitive defaults
+    from .config_loader import load_config_file
+
+    config_path = os.environ.get("PRDASH_CONFIG_FILE")
+    if not config_path and Path("config.yml").exists():
+        config_path = "config.yml"
+    file_data = load_config_file(config_path)
+    return Settings(config_file=config_path, **file_data)
+
+
+settings = build_settings()
