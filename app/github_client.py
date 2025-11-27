@@ -5,6 +5,7 @@ from gql import Client, gql
 from gql.transport.aiohttp import AIOHTTPTransport
 
 from .config import settings
+from .jira_client import parse_jira_key, parse_jira_keys
 
 GITHUB_API_URL = "https://api.github.com/graphql"
 
@@ -36,6 +37,7 @@ query RepoPRs($owner: String!, $name: String!, $first: Int!) {
         deletions
         changedFiles
         commitTotals: commits { totalCount }
+        commitMessages: commits(last: 10) { nodes { commit { messageHeadline } } }
         mergeStateStatus
         updatedAt
         mergedAt
@@ -122,7 +124,8 @@ query SinglePR($owner: String!, $name: String!, $number: Int!) {
       additions
       deletions
       changedFiles
-        commitTotals: commits { totalCount }
+      commitTotals: commits { totalCount }
+      commitMessages: commits(last: 10) { nodes { commit { messageHeadline } } }
       mergeStateStatus
       updatedAt
       mergedAt
@@ -311,6 +314,17 @@ def map_pr_nodes(owner: str, name: str, nodes: List[Dict[str, Any]]) -> List[Dic
         raw_data = dict(node)
         raw_data["size_sparkline"] = size_sparkline
 
+        jira_keys_set = set()
+        title_key = parse_jira_key(node.get("title", ""))
+        if title_key:
+            jira_keys_set.add(title_key)
+        for cm in node.get("commitMessages", {}).get("nodes", []):
+            msg = cm.get("commit", {}).get("messageHeadline")
+            for k in parse_jira_keys(msg):
+                jira_keys_set.add(k)
+        jira_keys_list = list(jira_keys_set)
+        raw_data["jira_keys"] = jira_keys_list
+
         mapped.append(
             {
                 "repo_owner": owner,
@@ -333,6 +347,8 @@ def map_pr_nodes(owner: str, name: str, nodes: List[Dict[str, Any]]) -> List[Dic
                 "merge_commit_sha": merge_commit.get("oid"),
                 "has_conflicts": has_conflicts,
                 "size_tier": size_tier,
+                "jira_key": jira_keys_list[0] if jira_keys_list else None,
+                "jira_keys": jira_keys_list,
                 "updated_at": parse_iso_dt(node["updatedAt"]),
                 "merged_at": merged_at,
                 "raw": raw_data,

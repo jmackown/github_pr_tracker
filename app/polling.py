@@ -12,6 +12,7 @@ from .github_client import (
     fetch_repo_prs,
     fetch_single_pr,
 )
+from .jira_client import fetch_jira_issue
 
 
 async def upsert_pr(session: AsyncSession, data: Dict) -> None:
@@ -41,6 +42,12 @@ async def upsert_pr(session: AsyncSession, data: Dict) -> None:
         existing.merge_commit_sha = data.get("merge_commit_sha")
         existing.has_conflicts = data.get("has_conflicts", False)
         existing.size_tier = data.get("size_tier", 0)
+        existing.jira_key = data.get("jira_key")
+        existing.jira_keys = data.get("jira_keys")
+        existing.jira_status = data.get("jira_status")
+        existing.jira_summary = data.get("jira_summary")
+        existing.jira_url = data.get("jira_url")
+        existing.jira_last_synced_at = data.get("jira_last_synced_at")
         existing.updated_at = data["updated_at"]
         existing.merged_at = data.get("merged_at")
         existing.last_synced_at = datetime.utcnow()
@@ -64,6 +71,12 @@ async def upsert_pr(session: AsyncSession, data: Dict) -> None:
                 merge_commit_sha=data.get("merge_commit_sha"),
                 has_conflicts=data.get("has_conflicts", False),
                 size_tier=data.get("size_tier", 0),
+                jira_key=data.get("jira_key"),
+                jira_keys=data.get("jira_keys"),
+                jira_status=data.get("jira_status"),
+                jira_summary=data.get("jira_summary"),
+                jira_url=data.get("jira_url"),
+                jira_last_synced_at=data.get("jira_last_synced_at"),
                 is_mine=is_mine,
                 updated_at=data["updated_at"],
                 merged_at=data.get("merged_at"),
@@ -85,6 +98,14 @@ async def poll_once() -> None:
                 reviewers = [r.lower() for r in pr.get("requested_reviewers", [])]
                 review_teams = [t.lower() for t in pr.get("requested_review_teams", [])]
 
+                if settings.jira_enabled and pr.get("jira_key"):
+                    issue = await fetch_jira_issue(pr["jira_key"])
+                    if issue:
+                        pr["jira_status"] = issue.get("status")
+                        pr["jira_summary"] = issue.get("summary")
+                        pr["jira_url"] = issue.get("url")
+                        pr["jira_last_synced_at"] = datetime.utcnow()
+
                 if (
                     author == settings.github_username.lower()
                     or settings.github_username.lower() in reviewers
@@ -96,6 +117,13 @@ async def poll_once() -> None:
         for owner, name, number in settings.watched_pr_list():
             pr = await fetch_single_pr(client, owner, name, number)
             if pr:
+                if settings.jira_enabled and pr.get("jira_key"):
+                    issue = await fetch_jira_issue(pr["jira_key"])
+                    if issue:
+                        pr["jira_status"] = issue.get("status")
+                        pr["jira_summary"] = issue.get("summary")
+                        pr["jira_url"] = issue.get("url")
+                        pr["jira_last_synced_at"] = datetime.utcnow()
                 await upsert_pr(session, pr)
 
         await session.commit()

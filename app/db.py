@@ -1,4 +1,5 @@
 from datetime import datetime
+from pathlib import Path
 from typing import Optional
 
 from sqlalchemy.ext.asyncio import (
@@ -8,6 +9,7 @@ from sqlalchemy.ext.asyncio import (
 )
 from sqlalchemy.orm import declarative_base, Mapped, mapped_column
 from sqlalchemy import String, Integer, DateTime, Boolean, JSON
+from sqlalchemy.engine import make_url
 
 from .config import settings
 
@@ -37,6 +39,12 @@ class PullRequest(Base):
     merge_commit_sha: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     has_conflicts: Mapped[bool] = mapped_column(Boolean, default=False)
     size_tier: Mapped[int] = mapped_column(Integer, default=0)
+    jira_key: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    jira_keys: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
+    jira_status: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    jira_summary: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    jira_url: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    jira_last_synced_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
 
     is_mine: Mapped[bool] = mapped_column(Boolean, default=False)
 
@@ -60,5 +68,11 @@ SessionLocal = async_sessionmaker(
 
 
 async def init_db() -> None:
+    url = make_url(settings.database_url)
+    if url.drivername.startswith("sqlite") and url.database:
+        db_path = Path(url.database)
+        if db_path.exists():
+            db_path.unlink()
+
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)

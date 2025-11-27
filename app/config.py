@@ -18,6 +18,10 @@ class Settings(BaseSettings):
 
     database_url: str = "sqlite+aiosqlite:///./prdash.db"
 
+    jira_base_url: str | None = None  # e.g. https://your-domain.atlassian.net
+    jira_email: str | None = None
+    jira_api_token: str | None = None
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_prefix="PRDASH_",
@@ -48,6 +52,10 @@ class Settings(BaseSettings):
             owner, name = repo_part.split("/", 1)
             prs.append((owner, name, int(num_str)))
         return prs
+
+    @property
+    def jira_enabled(self) -> bool:
+        return bool(self.jira_base_url and self.jira_email and self.jira_api_token)
 
 
 settings = Settings()

@@ -32,7 +32,7 @@ A simple FastAPI + HTMX dashboard that shows PRs you authored or need to review,
   - My PRs that need review
   - My PRs that have been reviewed
   - Merged PRs (today)
-  - Each card shows a “size” tier (trivial/small/.../massive) based on additions/deletions/files/commits.
+  - Each card shows a “size” tier (trivial/small/.../massive) based on additions/deletions/files/commits, and an optional Jira status badge if configured (keys from title or commit messages).
 
 ### Theming
 
@@ -48,4 +48,14 @@ PYTHONPATH=. uv run pytest
 
 ## Schema note
 
-`prdash.db` is auto-created on startup. If you pull new schema changes, drop the file or `ALTER TABLE` to add new columns (e.g., merge metadata, conflict flag, size tier).
+`prdash.db` is auto-created on startup. If you pull new schema changes, drop the file or `ALTER TABLE` to add new columns (e.g., merge metadata, conflict flag, size tier, jira fields).
+
+## Optional Jira integration
+
+If you want Jira status badges, add these to `.env`:
+```
+PRDASH_JIRA_BASE_URL=https://your-domain.atlassian.net
+PRDASH_JIRA_EMAIL=you@example.com
+PRDASH_JIRA_API_TOKEN=atlassian-api-token
+```
+The title must contain a ticket key (e.g., `ABC-123`); Jira calls are skipped entirely if these aren’t set.
