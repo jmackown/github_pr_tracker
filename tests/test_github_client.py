@@ -3,7 +3,12 @@ from app.github_client import summarise_ci, summarise_merge_ci, summarise_review
 
 def test_summarise_reviews_no_reviews():
     node = {"reviews": {"nodes": []}}
-    assert summarise_reviews(node) == "no reviews"
+    assert summarise_reviews(node) == "needs review"
+
+
+def test_summarise_reviews_dismissed_only():
+    node = {"reviews": {"nodes": [{"state": "DISMISSED"}]}}
+    assert summarise_reviews(node) == "needs re-review"
 
 
 def test_summarise_reviews_approved():

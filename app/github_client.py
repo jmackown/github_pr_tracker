@@ -216,10 +216,15 @@ def summarise_merge_ci(node: Dict[str, Any]) -> str | None:
 
 def summarise_reviews(node: Dict[str, Any]) -> str:
     reviews = node.get("reviews", {}).get("nodes", [])
-    if not reviews:
-        return "no reviews"
+    dismissed_present = any(r.get("state") == "DISMISSED" for r in reviews)
+    states = [
+        r["state"]
+        for r in reviews
+        if r.get("state") and r.get("state") != "DISMISSED"
+    ]
 
-    states = [r["state"] for r in reviews if r.get("state")]
+    if not states:
+        return "needs re-review" if dismissed_present else "needs review"
 
     if "APPROVED" in states:
         return "approved"
