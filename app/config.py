@@ -30,6 +30,8 @@ class Settings(BaseSettings):
     jira_status_draft: str | None = None
     jira_status_reviewed: str | None = None
     jira_status_merged: str | None = None
+    jira_components_enabled: bool = False
+    jira_component_repo_map: str | None = None  # ComponentName:repo,Other:repo2
 
     db_reset_on_start: bool = False  # set true to delete/recreate SQLite on startup
 
@@ -72,6 +74,18 @@ class Settings(BaseSettings):
         if value is None:
             return default
         return [v.strip() for v in value.split(",") if v.strip()]
+
+    def jira_component_map(self) -> dict[str, str]:
+        if not self.jira_component_repo_map:
+            return {}
+        mapping: dict[str, str] = {}
+        for item in self.jira_component_repo_map.split(","):
+            item = item.strip()
+            if not item or ":" not in item:
+                continue
+            comp, repo = item.split(":", 1)
+            mapping[comp.strip().lower()] = repo.strip().lower()
+        return mapping
 
 
 def build_settings() -> Settings:

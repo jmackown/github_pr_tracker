@@ -116,7 +116,7 @@
                   <span class="badge badge-conflict">Conflicts</span>
                 {% endif %}
 
-                {% if pr.jira_status and pr.jira_key %}
+                {% if pr.jira_status and pr.jira_key and settings.jira_components_enabled %}
                   {% set extra = pr.jira_keys|length - 1 if pr.jira_keys else 0 %}
                   <span class="badge {% if not jira_ok %}badge-strong{% else %}badge-jira{% endif %}">
                     {% if pr.jira_url %}
@@ -127,6 +127,13 @@
                     : {{ pr.jira_status }}
                     {% if extra > 0 %} (+{{ extra }} more){% endif %}
                   </span>
+                  {% if pr.jira_components %}
+                    <span class="badge {% if pr.jira_components_match %}badge-jira{% else %}badge-strong{% endif %}">
+                      Components: {{ pr.jira_components | join(", ") }}
+                    </span>
+                  {% else %}
+                    <span class="badge badge-strong">No components</span>
+                  {% endif %}
                 {% endif %}
 
                 {% if pr.review_status %}

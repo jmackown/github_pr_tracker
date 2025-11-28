@@ -36,7 +36,7 @@ A simple FastAPI + HTMX dashboard that shows PRs you authored or need to review,
   - My PRs that need review
   - My PRs that have been reviewed
   - Merged PRs (today)
-  - Each card shows a “size” tier (trivial/small/.../massive) based on additions/deletions/files/commits, and an optional Jira status badge if configured (keys from title or commit messages).
+  - Each card shows a “size” tier (trivial/small/.../massive) based on additions/deletions/files/commits, and an optional Jira badge with status/components if configured (keys from title or commit messages).
 
 ### Theming
 
@@ -61,6 +61,8 @@ If you want Jira status badges, add these to `.env`:
 PRDASH_JIRA_BASE_URL=https://your-domain.atlassian.net
 PRDASH_JIRA_EMAIL=you@example.com
 PRDASH_JIRA_API_TOKEN=atlassian-api-token
+# Optional: enable components/status badge; defaults false
+PRDASH_JIRA_COMPONENTS_ENABLED=false
 # Optional: limit matching to certain projects (comma-separated prefixes, e.g., PLAN,ABC)
 PRDASH_JIRA_PROJECT_PREFIXES=
 # Optional: expected statuses per lane (comma-separated); defaults shown
@@ -68,6 +70,8 @@ PRDASH_JIRA_STATUS_NEEDS_REVIEW=In Review
 PRDASH_JIRA_STATUS_DRAFT=In Development
 PRDASH_JIRA_STATUS_REVIEWED=In Review
 PRDASH_JIRA_STATUS_MERGED=Ready for QA,QA,In QA,Released,Done,Closed,Production
+# Optional: map Jira components to repos (comma-separated pairs, component:repo)
+PRDASH_JIRA_COMPONENT_REPO_MAP=ExternalCommunications:external-communication,GenRev:ds-genrev
 ```
 The title must contain a ticket key (e.g., `ABC-123`); Jira calls are skipped entirely if these aren’t set.
 

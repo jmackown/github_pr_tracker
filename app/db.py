@@ -45,6 +45,8 @@ class PullRequest(Base):
     jira_summary: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     jira_url: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     jira_last_synced_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+    jira_components: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
+    jira_components_match: Mapped[Optional[bool]] = mapped_column(Boolean, nullable=True)
 
     is_mine: Mapped[bool] = mapped_column(Boolean, default=False)
 

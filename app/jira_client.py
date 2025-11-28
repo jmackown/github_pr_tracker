@@ -9,7 +9,7 @@ from typing import Optional
 from .config import settings
 
 
-JIRA_KEY_RE = re.compile(r"\b([A-Z][A-Z0-9]+)[\s-]?(\d+)\b", re.IGNORECASE)
+JIRA_KEY_RE = re.compile(r"\b([A-Z]+)[\s-]?(\d+)\b", re.IGNORECASE)
 
 
 def parse_jira_key(text: str) -> Optional[str]:
@@ -48,7 +48,7 @@ async def fetch_jira_issue(key: str) -> Optional[dict]:
         return None
 
     base = settings.jira_base_url.rstrip("/")
-    url = f"{base}/rest/api/3/issue/{key}?fields=summary,status"
+    url = f"{base}/rest/api/3/issue/{key}?fields=summary,status,components"
 
     auth = f"{settings.jira_email}:{settings.jira_api_token}".encode()
     token = b64encode(auth).decode()
@@ -83,9 +83,11 @@ async def fetch_jira_issue(key: str) -> Optional[dict]:
     fields = payload.get("fields", {})
     status = fields.get("status", {}).get("name")
     summary = fields.get("summary")
+    components = [c.get("name") for c in fields.get("components", []) if c.get("name")]
     return {
         "key": key,
         "status": status,
         "summary": summary,
         "url": f"{base}/browse/{key}",
+        "components": components,
     }

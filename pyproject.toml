@@ -13,6 +13,7 @@ dependencies = [
     "aiosqlite",
     "gql[all]",
     "click",
+    "pyyaml",
 ]
 
 [project.optional-dependencies]

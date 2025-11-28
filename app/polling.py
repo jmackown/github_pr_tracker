@@ -13,6 +13,7 @@ from .github_client import (
     fetch_single_pr,
 )
 from .jira_client import fetch_jira_issue
+import re
 
 
 async def upsert_pr(session: AsyncSession, data: Dict) -> None:
@@ -48,6 +49,8 @@ async def upsert_pr(session: AsyncSession, data: Dict) -> None:
         existing.jira_summary = data.get("jira_summary")
         existing.jira_url = data.get("jira_url")
         existing.jira_last_synced_at = data.get("jira_last_synced_at")
+        existing.jira_components = data.get("jira_components")
+        existing.jira_components_match = data.get("jira_components_match")
         existing.updated_at = data["updated_at"]
         existing.merged_at = data.get("merged_at")
         existing.last_synced_at = datetime.utcnow()
@@ -77,6 +80,8 @@ async def upsert_pr(session: AsyncSession, data: Dict) -> None:
                 jira_summary=data.get("jira_summary"),
                 jira_url=data.get("jira_url"),
                 jira_last_synced_at=data.get("jira_last_synced_at"),
+                jira_components=data.get("jira_components"),
+                jira_components_match=data.get("jira_components_match"),
                 is_mine=is_mine,
                 updated_at=data["updated_at"],
                 merged_at=data.get("merged_at"),
@@ -98,13 +103,18 @@ async def poll_once() -> None:
                 reviewers = [r.lower() for r in pr.get("requested_reviewers", [])]
                 review_teams = [t.lower() for t in pr.get("requested_review_teams", [])]
 
-                if settings.jira_enabled and pr.get("jira_key"):
-                    issue = await fetch_jira_issue(pr["jira_key"])
-                    if issue:
-                        pr["jira_status"] = issue.get("status")
-                        pr["jira_summary"] = issue.get("summary")
-                        pr["jira_url"] = issue.get("url")
-                        pr["jira_last_synced_at"] = datetime.utcnow()
+                if settings.jira_enabled and settings.jira_components_enabled:
+                    key_for_fetch = pr.get("jira_key") or (pr.get("jira_keys") or [None])[0]
+                    if key_for_fetch:
+                        issue = await fetch_jira_issue(key_for_fetch)
+                        if issue:
+                            pr["jira_key"] = issue.get("key") or pr.get("jira_key")
+                            pr["jira_status"] = issue.get("status")
+                            pr["jira_summary"] = issue.get("summary")
+                            pr["jira_url"] = issue.get("url")
+                            pr["jira_last_synced_at"] = datetime.utcnow()
+                            pr["jira_components"] = issue.get("components")
+                            pr["jira_components_match"] = match_components(pr, issue.get("components"))
 
                 if (
                     author == settings.github_username.lower()
@@ -117,16 +127,43 @@ async def poll_once() -> None:
         for owner, name, number in settings.watched_pr_list():
             pr = await fetch_single_pr(client, owner, name, number)
             if pr:
-                if settings.jira_enabled and pr.get("jira_key"):
-                    issue = await fetch_jira_issue(pr["jira_key"])
-                    if issue:
-                        pr["jira_status"] = issue.get("status")
-                        pr["jira_summary"] = issue.get("summary")
-                        pr["jira_url"] = issue.get("url")
-                        pr["jira_last_synced_at"] = datetime.utcnow()
+                if settings.jira_enabled and settings.jira_components_enabled:
+                    key_for_fetch = pr.get("jira_key") or (pr.get("jira_keys") or [None])[0]
+                    if key_for_fetch:
+                        issue = await fetch_jira_issue(key_for_fetch)
+                        if issue:
+                            pr["jira_key"] = issue.get("key") or pr.get("jira_key")
+                            pr["jira_status"] = issue.get("status")
+                            pr["jira_summary"] = issue.get("summary")
+                            pr["jira_url"] = issue.get("url")
+                            pr["jira_last_synced_at"] = datetime.utcnow()
+                            pr["jira_components"] = issue.get("components")
+                            pr["jira_components_match"] = match_components(pr, issue.get("components"))
                 await upsert_pr(session, pr)
 
         await session.commit()
+
+
+def _normalize_component(name: str) -> str:
+    return re.sub(r"[^a-z0-9]", "", name.lower())
+
+
+def match_components(pr: Dict, components: list | None) -> bool | None:
+    if not components:
+        return None
+    repo = pr.get("repo_name", "").lower()
+    repo_norm = _normalize_component(repo)
+    mapping = settings.jira_component_map()
+    for comp in components:
+        if not comp:
+            continue
+        comp_norm = _normalize_component(comp)
+        mapped = mapping.get(comp_norm) or mapping.get(comp.lower())
+        if mapped and mapped == repo:
+            return True
+        if repo_norm and (repo_norm in comp_norm or comp_norm.startswith(repo_norm)):
+            return True
+    return False
 
 
 async def poll_loop() -> None:
