@@ -1,5 +1,6 @@
 import asyncio
-from datetime import datetime
+from datetime import datetime, timezone
+from zoneinfo import ZoneInfo
 
 from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse
@@ -30,22 +31,38 @@ async def get_session() -> AsyncSession:
 @app.get("/", response_class=HTMLResponse)
 async def index(request: Request):
     async with SessionLocal() as session:
-        groups = await load_pr_groups(session)
+        groups, last_sync = await load_pr_groups(session)
+        last_sync_str = format_ts(last_sync)
 
     return templates.TemplateResponse(
         "index.html",
-        {"request": request, "groups": groups, "now": datetime.utcnow(), "settings": settings},
+        {
+            "request": request,
+            "groups": groups,
+            "now": datetime.utcnow(),
+            "settings": settings,
+            "last_sync": last_sync,
+            "last_sync_str": last_sync_str,
+        },
     )
 
 
 @app.get("/fragments/pr-table", response_class=HTMLResponse)
 async def pr_table(request: Request):
     async with SessionLocal() as session:
-        groups = await load_pr_groups(session)
+        groups, last_sync = await load_pr_groups(session)
+        last_sync_str = format_ts(last_sync)
 
     return templates.TemplateResponse(
         "_pr_table.html",
-        {"request": request, "groups": groups, "now": datetime.utcnow(), "settings": settings},
+        {
+            "request": request,
+            "groups": groups,
+            "now": datetime.utcnow(),
+            "settings": settings,
+            "last_sync": last_sync,
+            "last_sync_str": last_sync_str,
+        },
     )
 
 
@@ -94,7 +111,18 @@ async def load_pr_groups(session: AsyncSession):
     )
     result = await session.execute(stmt)
     prs = result.scalars().all()
-    return categorize_prs(prs)
+    last_sync = None
+    for pr in prs:
+        if pr.last_synced_at and (last_sync is None or pr.last_synced_at > last_sync):
+            last_sync = pr.last_synced_at
+    return categorize_prs(prs), last_sync
+
+
+def format_ts(dt: datetime | None) -> str:
+    if not dt:
+        return "n/a"
+    london = dt.replace(tzinfo=timezone.utc).astimezone(ZoneInfo("Europe/London"))
+    return london.strftime("%b %d, %Y %H:%M")
 
 
 @click.command()

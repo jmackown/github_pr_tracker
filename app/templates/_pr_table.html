@@ -166,3 +166,13 @@
     </section>
   {% endfor %}
 </div>
+
+<script>
+  // Update last refresh timestamp on fragment load
+  (function() {
+    const el = document.getElementById("last-refresh");
+    if (el && "{{ last_sync_str }}") {
+      el.textContent = "{{ last_sync_str }}";
+    }
+  })();
+</script>
