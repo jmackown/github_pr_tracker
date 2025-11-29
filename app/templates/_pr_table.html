@@ -89,68 +89,25 @@
                 </div>
               {% endif %}
 
-              {% set expected_jira = [] %}
-              {% set jira_ok = True %}
-              {% if pr.is_mine and pr.jira_status %}
-                {% set status_lower = pr.jira_status.lower() %}
-                {% if title == "My PRs that need review" %}
-                  {% if pr.is_draft %}
-                    {% set expected_jira = settings.jira_status_list(settings.jira_status_draft, ["In Development"]) %}
-                  {% else %}
-                    {% set expected_jira = settings.jira_status_list(settings.jira_status_needs_review, ["In Review"]) %}
-                  {% endif %}
-                {% elif title == "My PRs that have been reviewed" %}
-                  {% set expected_jira = settings.jira_status_list(settings.jira_status_reviewed, ["In Review"]) %}
-                {% elif title.startswith("Merged PRs") %}
-                  {% set expected_jira = settings.jira_status_list(settings.jira_status_merged, ["Ready for QA","QA","In QA","Released","Done","Closed","Production"]) %}
-                {% endif %}
-
-                {% if expected_jira %}
-                  {% set expected_lower = expected_jira | map('lower') | list %}
-                  {% set jira_ok = status_lower in expected_lower %}
-                {% endif %}
-              {% endif %}
-
-              <div class="meta badges-row">
+              {# ═══════════════════════════════════════════════════════════════
+                 PR BADGES (conflicts, CI, review status)
+                 ═══════════════════════════════════════════════════════════════ #}
+              <div class="pr-badges">
                 {% if pr.has_conflicts %}
                   <span class="badge badge-conflict">Conflicts</span>
                 {% endif %}
 
-                {% if pr.jira_status and pr.jira_key and settings.jira_components_enabled %}
-                  {% set extra = pr.jira_keys|length - 1 if pr.jira_keys else 0 %}
-                  <span class="badge {% if not jira_ok %}badge-strong{% else %}badge-jira{% endif %}">
-                    {% if pr.jira_url %}
-                      <a class="pr-link" href="{{ pr.jira_url }}" target="_blank" rel="noopener">{{ pr.jira_key }}</a>
-                    {% else %}
-                      {{ pr.jira_key }}
-                    {% endif %}
-                    : {{ pr.jira_status }}
-                    {% if extra > 0 %} (+{{ extra }} more){% endif %}
-                  </span>
-                  {% if pr.jira_components %}
-                    <span class="badge {% if pr.jira_components_match %}badge-jira{% else %}badge-strong{% endif %}">
-                      Components: {{ pr.jira_components | join(", ") }}
-                    </span>
-                  {% else %}
-                    <span class="badge badge-strong">No components</span>
-                  {% endif %}
-                {% endif %}
-
                 {% if pr.review_status %}
-                  <span class="badge">
-                    {{ pr.review_status }}
-                  </span>
+                  <span class="badge">{{ pr.review_status }}</span>
                 {% endif %}
 
-        {% if pr.ci_summary %}
-          {% set ci = pr.ci_summary.lower() %}
-          <span class="badge
-            {% if 'failed' in ci or 'failure' in ci %}badge-strong
-            {% elif 'pending' in ci or 'running' in ci %}ci-running
-            {% else %}ci-passed{% endif %}
-          ">
-            {{ pr.ci_summary }}
-          </span>
+                {% if pr.ci_summary %}
+                  {% set ci = pr.ci_summary.lower() %}
+                  <span class="badge
+                    {% if 'failed' in ci or 'failure' in ci %}badge-strong
+                    {% elif 'pending' in ci or 'running' in ci %}ci-running
+                    {% else %}ci-passed{% endif %}
+                  ">{{ pr.ci_summary }}</span>
                 {% endif %}
 
                 {% if pr.state == "MERGED" and pr.merge_ci_summary %}
@@ -159,11 +116,71 @@
                     {% if 'failed' in mci %}ci-failed
                     {% elif 'pending' in mci or 'running' in mci %}ci-running
                     {% else %}ci-passed{% endif %}
-                  ">
-                    merge: {{ pr.merge_ci_summary }}
-                  </span>
+                  ">merge: {{ pr.merge_ci_summary }}</span>
                 {% endif %}
               </div>
+
+              {# ═══════════════════════════════════════════════════════════════
+                 JIRA FOOTER STRIP
+                 ═══════════════════════════════════════════════════════════════ #}
+              {% if pr.jira_status and pr.jira_key and settings.jira_components_enabled %}
+                {% set expected_jira = [] %}
+                {% set jira_ok = True %}
+                {% if pr.is_mine and pr.jira_status %}
+                  {% set status_lower = pr.jira_status.lower() %}
+                  {% if title == "My PRs that need review" %}
+                    {% if pr.is_draft %}
+                      {% set expected_jira = settings.jira_status_list(settings.jira_status_draft, ["In Development"]) %}
+                    {% else %}
+                      {% set expected_jira = settings.jira_status_list(settings.jira_status_needs_review, ["In Review"]) %}
+                    {% endif %}
+                  {% elif title == "My PRs that have been reviewed" %}
+                    {% set expected_jira = settings.jira_status_list(settings.jira_status_reviewed, ["In Review"]) %}
+                  {% elif title.startswith("Merged PRs") %}
+                    {% set expected_jira = settings.jira_status_list(settings.jira_status_merged, ["Ready for QA","QA","In QA","Released","Done","Closed","Production"]) %}
+                  {% endif %}
+
+                  {% if expected_jira %}
+                    {% set expected_lower = expected_jira | map('lower') | list %}
+                    {% set jira_ok = status_lower in expected_lower %}
+                  {% endif %}
+                {% endif %}
+
+                {% set extra = pr.jira_keys|length - 1 if pr.jira_keys else 0 %}
+
+                <div class="jira-strip">
+                  <span class="jira-strip-label">Jira</span>
+
+                  <span class="jira-status">
+                    <span class="jira-status-key">
+                      {% if pr.jira_url %}
+                        <a href="{{ pr.jira_url }}" target="_blank" rel="noopener">{{ pr.jira_key }}</a>
+                      {% else %}
+                        {{ pr.jira_key }}
+                      {% endif %}
+                    </span>
+                    <span class="jira-status-value {% if not jira_ok %}mismatch{% endif %}">
+                      {{ pr.jira_status }}
+                    </span>
+                    {% if extra > 0 %}
+                      <span class="jira-extra">(+{{ extra }} more)</span>
+                    {% endif %}
+                  </span>
+
+                  <span class="jira-divider"></span>
+
+                  <span class="jira-components">
+                    <span class="jira-components-label">Components:</span>
+                    {% if pr.jira_components %}
+                      <span class="jira-components-value {% if pr.jira_components_match %}matched{% else %}missing{% endif %}">
+                        {{ pr.jira_components | join(", ") }}
+                      </span>
+                    {% else %}
+                      <span class="jira-components-value missing">None</span>
+                    {% endif %}
+                  </span>
+                </div>
+              {% endif %}
 
             </div>
 
