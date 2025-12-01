@@ -123,9 +123,10 @@
               {# ═══════════════════════════════════════════════════════════════
                  JIRA FOOTER STRIP
                  ═══════════════════════════════════════════════════════════════ #}
-              {% if pr.jira_status and pr.jira_key and settings.jira_components_enabled %}
+              {% if pr.jira_status and pr.jira_key %}
                 {% set expected_jira = [] %}
                 {% set jira_ok = True %}
+                {% set assignee_warn = pr.is_mine and ((pr.jira_assignee_match is not none and not pr.jira_assignee_match) or (not pr.jira_assignee)) %}
                 {% if pr.is_mine and pr.jira_status %}
                   {% set status_lower = pr.jira_status.lower() %}
                   {% if title == "My PRs that need review" %}
@@ -165,20 +166,39 @@
                     {% if extra > 0 %}
                       <span class="jira-extra">(+{{ extra }} more)</span>
                     {% endif %}
+                    {% if assignee_warn %}
+                      <span class="jira-extra warn">Assignee mismatch</span>
+                    {% endif %}
                     <span class="htmx-indicator"></span>
                   </span>
 
                   <span class="jira-divider"></span>
 
+                  {% if pr.jira_assignee %}
+                    <span class="jira-components">
+                      <span class="jira-components-label">Assignee:</span>
+                      {% set assignee_class = "matched" %}
+                      {% if pr.is_mine and pr.jira_assignee_match is not none and not pr.jira_assignee_match %}
+                        {% set assignee_class = "missing" %}
+                      {% endif %}
+                      <span class="jira-components-value {{ assignee_class }}">{{ pr.jira_assignee }}</span>
+                    </span>
+                  {% else %}
+                    <span class="jira-components">
+                      <span class="jira-components-label">Assignee:</span>
+                      <span class="jira-components-value missing">None</span>
+                    </span>
+                  {% endif %}
+
                   <span class="jira-components">
                     <span class="jira-components-label">Components:</span>
-                    {% if pr.jira_components %}
-                      <span class="jira-components-value {% if pr.jira_components_match %}matched{% else %}missing{% endif %}">
-                        {{ pr.jira_components | join(", ") }}
-                      </span>
-                    {% else %}
-                      <span class="jira-components-value missing">None</span>
-                    {% endif %}
+                  {% if pr.jira_components %}
+                    <span class="jira-components-value {% if pr.jira_components_match %}matched{% else %}missing{% endif %}">
+                      {{ pr.jira_components | join(", ") }}
+                    </span>
+                  {% else %}
+                    <span class="jira-components-value missing">None</span>
+                  {% endif %}
                   </span>
 
                   {% if pr.is_mine and not jira_ok and expected_jira %}
@@ -213,6 +233,22 @@
                       Add repo component
                     </button>
                     <span id="{{ comp_indicator }}" class="htmx-indicator"></span>
+                  {% endif %}
+
+                  {% if pr.is_mine and pr.jira_assignee_match is not none and not pr.jira_assignee_match %}
+                    {% set assign_indicator = ("ind-assign-" ~ pr.repo_name ~ "-" ~ pr.number)|replace(" ", "-") %}
+                    <button
+                      class="jira-fix-btn"
+                      hx-post="/jira/{{ pr.jira_key }}/assign"
+                      hx-target="#pr-table-container"
+                      hx-swap="innerHTML"
+                      hx-indicator="#{{ assign_indicator }}"
+                      hx-on::before-request="this.disabled=true"
+                      hx-headers='{"X-Requested-With": "XMLHttpRequest"}'
+                    >
+                      Assign to me
+                    </button>
+                    <span id="{{ assign_indicator }}" class="htmx-indicator"></span>
                   {% endif %}
                 </div>
               {% endif %}

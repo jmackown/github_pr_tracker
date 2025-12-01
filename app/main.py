@@ -20,6 +20,7 @@ from .jira_client import (
     transition_jira_issue,
     fetch_project_components,
     add_components_to_issue,
+    assign_issue,
 )
 from .jira_transitions import expected_statuses_for_lane, pick_transition
 
@@ -359,6 +360,41 @@ async def jira_fix_components(
         raise HTTPException(status_code=500, detail="Failed to add components")
 
     # Render with live Jira data; persistence will be handled by the poller
+    async with SessionLocal() as session:
+        groups, last_sync = await load_pr_groups(session)
+        last_sync_str = format_ts(last_sync)
+    return templates.TemplateResponse(
+        "_pr_table.html",
+        {
+            "request": request,
+            "groups": groups,
+            "now": datetime.utcnow(),
+            "settings": settings,
+            "last_sync": last_sync,
+            "last_sync_str": last_sync_str,
+        },
+    )
+
+
+@app.post("/jira/{key}/assign")
+async def jira_assign(
+    request: Request,
+    key: str,
+):
+    if not settings.jira_enabled:
+        raise HTTPException(status_code=400, detail="Jira not configured")
+
+    async with SessionLocal() as session:
+        pr_match = await session.execute(
+            select(PullRequest).where(PullRequest.jira_key == key, PullRequest.is_mine.is_(True))
+        )
+        if not pr_match.scalars().first():
+            raise HTTPException(status_code=403, detail="Not allowed to assign this issue")
+
+    if not await assign_issue(key):
+        raise HTTPException(status_code=500, detail="Failed to assign (check Jira logs)")
+
+    # Render with refreshed data
     async with SessionLocal() as session:
         groups, last_sync = await load_pr_groups(session)
         last_sync_str = format_ts(last_sync)

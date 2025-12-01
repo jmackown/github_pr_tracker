@@ -7,6 +7,8 @@ db_reset_on_start: false
 # Jira (optional)
 jira_base_url: https://your-domain.atlassian.net
 jira_email: you@example.com
+jira_username: you@example.com   # for assignee matching
+jira_account_id: ""             # optional, for assignment; else resolved via search
 jira_project_prefixes: ""
 jira_components_enabled: false
 jira_component_repo_map:

@@ -61,6 +61,8 @@ If you want Jira status badges, add these to `.env`:
 PRDASH_JIRA_BASE_URL=https://your-domain.atlassian.net
 PRDASH_JIRA_EMAIL=you@example.com
 PRDASH_JIRA_API_TOKEN=atlassian-api-token
+PRDASH_JIRA_USERNAME=you@example.com   # used to flag mismatched assignee
+PRDASH_JIRA_ACCOUNT_ID=xxxxxxxxxxxxxxx # optional; set to avoid account lookup for assignment
 # Optional: enable components/status badge; defaults false
 PRDASH_JIRA_COMPONENTS_ENABLED=false
 # Optional: limit matching to certain projects (comma-separated prefixes, e.g., PLAN,ABC)
