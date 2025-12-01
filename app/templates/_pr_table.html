@@ -165,6 +165,7 @@
                     {% if extra > 0 %}
                       <span class="jira-extra">(+{{ extra }} more)</span>
                     {% endif %}
+                    <span class="htmx-indicator"></span>
                   </span>
 
                   <span class="jira-divider"></span>
@@ -179,6 +180,40 @@
                       <span class="jira-components-value missing">None</span>
                     {% endif %}
                   </span>
+
+                  {% if pr.is_mine and not jira_ok and expected_jira %}
+                    {% set status_indicator = ("ind-status-" ~ pr.repo_name ~ "-" ~ pr.number)|replace(" ", "-") %}
+                    <button
+                      class="jira-fix-btn"
+                      hx-post="/jira/{{ pr.jira_key }}/transition"
+                      hx-vals='{"target": "{{ expected_jira|first if expected_jira else "" }}", "lane": "{{ title }}", "is_draft": "{{ pr.is_draft }}"}'
+                      hx-target="#pr-table-container"
+                      hx-swap="innerHTML"
+                      hx-indicator="#{{ status_indicator }}"
+                      hx-disabled-elt="this"
+                      hx-headers='{"X-Requested-With": "XMLHttpRequest"}'
+                    >
+                      Set to {{ expected_jira|first }}
+                    </button>
+                    <span id="{{ status_indicator }}" class="htmx-indicator"></span>
+                  {% endif %}
+
+                  {% if pr.is_mine and settings.jira_components_enabled and (not pr.jira_components_match) %}
+                    {% set comp_indicator = ("ind-comp-" ~ pr.repo_name ~ "-" ~ pr.number)|replace(" ", "-") %}
+                    <button
+                      class="jira-fix-btn"
+                      hx-post="/jira/{{ pr.jira_key }}/components/fix"
+                      hx-vals='{"repo": "{{ pr.repo_name }}"}'
+                      hx-target="#pr-table-container"
+                      hx-swap="innerHTML"
+                      hx-indicator="#{{ comp_indicator }}"
+                      hx-disabled-elt="this"
+                      hx-headers='{"X-Requested-With": "XMLHttpRequest"}'
+                    >
+                      Add repo component
+                    </button>
+                    <span id="{{ comp_indicator }}" class="htmx-indicator"></span>
+                  {% endif %}
                 </div>
               {% endif %}
 

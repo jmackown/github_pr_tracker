@@ -32,6 +32,7 @@ class Settings(BaseSettings):
     jira_status_merged: str | None = None
     jira_components_enabled: bool = False
     jira_component_repo_map: str | None = None  # ComponentName:repo,Other:repo2
+    jira_transition_map_file: str | None = "docs/jira_workflow_transitions.yml"
 
     db_reset_on_start: bool = False  # set true to delete/recreate SQLite on startup
 

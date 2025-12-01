@@ -428,6 +428,45 @@
     text-shadow: none;
   }
 
+  .jira-fix-btn {
+    border: 1px solid var(--panel-border);
+    background: transparent;
+    color: var(--text);
+    padding: 0.2rem 0.5rem;
+    border-radius: 8px;
+    font-size: 0.75rem;
+    cursor: pointer;
+    margin-left: auto;
+  }
+  .jira-fix-btn:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+
+  .htmx-indicator {
+    display: none;
+    margin-left: 0.35rem;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    border: 2px solid var(--muted);
+    border-top-color: var(--accent);
+    animation: spin 0.8s linear infinite;
+  }
+
+  .htmx-request .htmx-indicator {
+    display: inline-block;
+  }
+
+  .jira-fix-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
+
   body.theme-minimal-light .pill-draft {
     background: #f1f3f4;
     border: none;

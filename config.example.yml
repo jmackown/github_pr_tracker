@@ -9,7 +9,9 @@ jira_base_url: https://your-domain.atlassian.net
 jira_email: you@example.com
 jira_project_prefixes: ""
 jira_components_enabled: false
-jira_component_repo_map: ""
+jira_component_repo_map:
+  ExternalCommunications: external-communication
+  GenRev: ds-genrev
 jira_status_needs_review: In Review
 jira_status_draft: In Development
 jira_status_reviewed: In Review
