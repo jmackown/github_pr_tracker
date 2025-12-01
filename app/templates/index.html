@@ -1,12 +1,6 @@
 {% extends "base.html" %}
 
 {% block content %}
-  <h1>GitHub PR Dashboard</h1>
-
-  <p class="small">
-    Last synced at: <span id="last-refresh">{{ last_sync_str }}</span>
-  </p>
-
   <div
     id="pr-table-container"
     hx-get="/fragments/pr-table"

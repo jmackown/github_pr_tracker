@@ -1,6 +1,6 @@
 import asyncio
 from datetime import datetime
-from typing import Dict, Tuple
+from typing import Dict, Tuple, Optional
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -51,6 +51,8 @@ async def upsert_pr(session: AsyncSession, data: Dict) -> None:
         existing.jira_last_synced_at = data.get("jira_last_synced_at")
         existing.jira_components = data.get("jira_components")
         existing.jira_components_match = data.get("jira_components_match")
+        existing.jira_assignee = data.get("jira_assignee")
+        existing.jira_assignee_match = data.get("jira_assignee_match")
         existing.updated_at = data["updated_at"]
         existing.merged_at = data.get("merged_at")
         existing.last_synced_at = datetime.utcnow()
@@ -82,6 +84,8 @@ async def upsert_pr(session: AsyncSession, data: Dict) -> None:
                 jira_last_synced_at=data.get("jira_last_synced_at"),
                 jira_components=data.get("jira_components"),
                 jira_components_match=data.get("jira_components_match"),
+                jira_assignee=data.get("jira_assignee"),
+                jira_assignee_match=data.get("jira_assignee_match"),
                 is_mine=is_mine,
                 updated_at=data["updated_at"],
                 merged_at=data.get("merged_at"),
@@ -103,7 +107,7 @@ async def poll_once() -> None:
                 reviewers = [r.lower() for r in pr.get("requested_reviewers", [])]
                 review_teams = [t.lower() for t in pr.get("requested_review_teams", [])]
 
-                if settings.jira_enabled and settings.jira_components_enabled:
+                if settings.jira_enabled:
                     key_for_fetch = pr.get("jira_key") or (pr.get("jira_keys") or [None])[0]
                     if key_for_fetch:
                         issue = await fetch_jira_issue(key_for_fetch)
@@ -114,7 +118,10 @@ async def poll_once() -> None:
                             pr["jira_url"] = issue.get("url")
                             pr["jira_last_synced_at"] = datetime.utcnow()
                             pr["jira_components"] = issue.get("components")
-                            pr["jira_components_match"] = match_components(pr, issue.get("components"))
+                            pr["jira_components_match"] = match_components(pr, issue.get("components")) if settings.jira_components_enabled else None
+                            assignee, assignee_match = match_assignee(issue)
+                            pr["jira_assignee"] = assignee
+                            pr["jira_assignee_match"] = assignee_match
 
                 if (
                     author == settings.github_username.lower()
@@ -127,7 +134,7 @@ async def poll_once() -> None:
         for owner, name, number in settings.watched_pr_list():
             pr = await fetch_single_pr(client, owner, name, number)
             if pr:
-                if settings.jira_enabled and settings.jira_components_enabled:
+                if settings.jira_enabled:
                     key_for_fetch = pr.get("jira_key") or (pr.get("jira_keys") or [None])[0]
                     if key_for_fetch:
                         issue = await fetch_jira_issue(key_for_fetch)
@@ -138,7 +145,10 @@ async def poll_once() -> None:
                             pr["jira_url"] = issue.get("url")
                             pr["jira_last_synced_at"] = datetime.utcnow()
                             pr["jira_components"] = issue.get("components")
-                            pr["jira_components_match"] = match_components(pr, issue.get("components"))
+                            pr["jira_components_match"] = match_components(pr, issue.get("components")) if settings.jira_components_enabled else None
+                            assignee, assignee_match = match_assignee(issue)
+                            pr["jira_assignee"] = assignee
+                            pr["jira_assignee_match"] = assignee_match
                 await upsert_pr(session, pr)
 
         await session.commit()
@@ -164,6 +174,36 @@ def match_components(pr: Dict, components: list | None) -> bool | None:
         if repo_norm and (repo_norm in comp_norm or comp_norm.startswith(repo_norm)):
             return True
     return False
+
+
+def match_assignee(issue: dict | None) -> tuple[Optional[str], Optional[bool]]:
+    if not issue:
+        return None, False
+    assignee = issue.get("assignee") or {}
+    display = (assignee.get("displayName") or "").lower().strip()
+    email = (assignee.get("emailAddress") or "").lower().strip()
+    name = assignee.get("displayName") or assignee.get("emailAddress")
+    if not name:
+        return None, False
+
+    # Build allowed identifiers
+    allowed = set()
+    if settings.jira_username:
+        norm = settings.jira_username.lower().strip()
+        allowed.add(norm)
+        allowed.add(norm.replace(" ", ""))
+    if settings.jira_email:
+        allowed.add(settings.jira_email.lower().strip())
+    if settings.github_username:
+        allowed.add(settings.github_username.lower().strip())
+        allowed.add(settings.github_username.lower().replace(" ", ""))
+
+    if not allowed:
+        return name, None
+
+    candidates = {display, email, display.replace(" ", ""), email.replace(" ", "")}
+    match = any(c and c in allowed for c in candidates)
+    return name, match
 
 
 async def poll_loop() -> None:

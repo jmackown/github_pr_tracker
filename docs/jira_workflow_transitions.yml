@@ -1,0 +1,33 @@
+target_states:
+  - In Development
+  - In Review
+  - Awaiting QA
+
+transitions_into:
+  In Development:
+    - from: "Awaiting Development"
+      id: "21"
+      via: "Start Development"
+
+  In Review:
+    - from: "In Development"
+      id: "491"
+      via: "In Review"
+
+  Awaiting QA:
+    - from: "In Review"
+      id: "611"
+      via: "No design review necessary"
+
+
+path_to_in_review:
+  start_state: "Awaiting Refinement"
+  transitions:
+    - id: "451"
+      via: "Ready for Development"   # to Ready for Dev
+    - id: "461"
+      via: "Add to Cycle/Sprint"     # to Awaiting Development
+    - id: "21"
+      via: "Start Development"       # to In Development
+    - id: "491"
+      via: "In Review"               # to In Review

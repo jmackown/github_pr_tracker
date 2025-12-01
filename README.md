@@ -61,6 +61,8 @@ If you want Jira status badges, add these to `.env`:
 PRDASH_JIRA_BASE_URL=https://your-domain.atlassian.net
 PRDASH_JIRA_EMAIL=you@example.com
 PRDASH_JIRA_API_TOKEN=atlassian-api-token
+PRDASH_JIRA_USERNAME=you@example.com   # used to flag mismatched assignee
+PRDASH_JIRA_ACCOUNT_ID=xxxxxxxxxxxxxxx # optional; set to avoid account lookup for assignment
 # Optional: enable components/status badge; defaults false
 PRDASH_JIRA_COMPONENTS_ENABLED=false
 # Optional: limit matching to certain projects (comma-separated prefixes, e.g., PLAN,ABC)
@@ -70,8 +72,14 @@ PRDASH_JIRA_STATUS_NEEDS_REVIEW=In Review
 PRDASH_JIRA_STATUS_DRAFT=In Development
 PRDASH_JIRA_STATUS_REVIEWED=In Review
 PRDASH_JIRA_STATUS_MERGED=Ready for QA,QA,In QA,Released,Done,Closed,Production
-# Optional: map Jira components to repos (comma-separated pairs, component:repo)
-PRDASH_JIRA_COMPONENT_REPO_MAP=ExternalCommunications:external-communication,GenRev:ds-genrev
+# Optional: map Jira components to repos (YAML map in config.yml)
+# In config.yml:
+# jira_component_repo_map:
+#   ExternalCommunications: external-communication
+#   GenRev: ds-genrev
+# Env fallback (comma-separated pairs): PRDASH_JIRA_COMPONENT_REPO_MAP=ExternalCommunications:external-communication,GenRev:ds-genrev
+# Optional: transition map for multi-step Jira moves (YAML file)
+# jira_transition_map_file: docs/jira_workflow_transitions.yml
 ```
 The title must contain a ticket key (e.g., `ABC-123`); Jira calls are skipped entirely if these aren’t set.
 

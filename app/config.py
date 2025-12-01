@@ -25,6 +25,8 @@ class Settings(BaseSettings):
     jira_base_url: str | None = None  # e.g. https://your-domain.atlassian.net
     jira_email: str | None = None
     jira_api_token: str | None = None
+    jira_username: str | None = None  # your Jira display/email name for assignee matching
+    jira_account_id: str | None = None  # preferred for assignment if available
     jira_project_prefixes: str | None = None  # comma-separated; optional filter
     jira_status_needs_review: str | None = None  # comma-separated expected statuses
     jira_status_draft: str | None = None
@@ -32,6 +34,7 @@ class Settings(BaseSettings):
     jira_status_merged: str | None = None
     jira_components_enabled: bool = False
     jira_component_repo_map: str | None = None  # ComponentName:repo,Other:repo2
+    jira_transition_map_file: str | None = "docs/jira_workflow_transitions.yml"
 
     db_reset_on_start: bool = False  # set true to delete/recreate SQLite on startup
 
