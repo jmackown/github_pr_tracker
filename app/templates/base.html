@@ -282,6 +282,7 @@
 
   body.theme-minimal-light .grid {
     gap: 1.25rem;
+    align-items: stretch;
   }
 
   body.theme-minimal-light .card {
@@ -289,9 +290,13 @@
     border: 1px solid #e9ecef;
     border-radius: 8px;
     box-shadow: none;
-    padding: 1.25rem;
+    padding: 1.25rem 1.25rem 0 1.25rem;
     animation: none;
     transition: border-color 0.15s ease;
+  }
+
+  body.theme-minimal-light .card:not(:has(.jira-strip)) {
+    padding-bottom: 1.25rem;
   }
 
   body.theme-minimal-light .card:hover {
@@ -496,8 +501,9 @@
   body.theme-minimal-light .jira-strip {
     background: #f8f9fa;
     border-top: 1px solid #e9ecef;
-    margin: 1rem -1.25rem -1.25rem -1.25rem;
-    padding: 0.75rem 1.25rem;
+    margin: 0.75rem -1.25rem 0 -1.25rem;
+    padding: 0.75rem 1.25rem 0.85rem;
+    border-radius: 0 0 8px 8px;
   }
 
   body.theme-minimal-light .jira-strip::before {
@@ -1127,16 +1133,21 @@
 
   body.theme-nord .grid {
     gap: 1.25rem;
+    align-items: stretch;
   }
 
   body.theme-nord .card {
     background: rgba(59, 66, 82, 0.7);
     border: none;
     border-radius: var(--radius);
-    padding: 1.5rem;
+    padding: 1.5rem 1.5rem 0 1.5rem;
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
     animation: none;
     transition: all 0.25s ease;
+  }
+
+  body.theme-nord .card:not(:has(.jira-strip)) {
+    padding-bottom: 1.5rem;
   }
 
   body.theme-nord .card::before {
@@ -1322,7 +1333,7 @@
   body.theme-nord .jira-strip {
     background: rgba(46, 52, 64, 0.4);
     border-top: none;
-    margin: 1rem -1.5rem -1.5rem -1.5rem;
+    margin: 0.75rem -1.5rem 0 -1.5rem;
     padding: 1rem 1.5rem;
     border-radius: 0 0 var(--radius) var(--radius);
   }
@@ -1847,14 +1858,21 @@
      ═══════════════════════════════════════════════════════════════════════════ */
   .grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(360px, 420px));
+    justify-content: start;
     align-items: stretch;
-    gap: 1rem;
+    gap: 1.25rem;
   }
 
-  @media (min-width: 1400px) {
+  @media (max-width: 800px) {
     .grid {
-      grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+      grid-template-columns: 1fr;
+    }
+  }
+
+  @media (min-width: 1600px) {
+    .grid {
+      grid-template-columns: repeat(auto-fill, minmax(380px, 440px));
     }
   }
 
@@ -1866,7 +1884,7 @@
       linear-gradient(135deg, rgba(0, 245, 255, 0.03) 0%, rgba(191, 0, 255, 0.03) 100%),
       var(--surface);
     border-radius: var(--radius);
-    padding: 1.25rem 1.25rem 1.25rem 1.5rem;
+    padding: 1.25rem 1.25rem 0 1.5rem;
     position: relative;
     display: flex;
     flex-direction: column;
@@ -1876,7 +1894,23 @@
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     overflow: hidden;
     animation: card-enter 0.4s ease-out both;
-    height: 100%;
+  }
+
+  /* Ensure cards without Jira strip have proper bottom padding */
+  .card:not(:has(.jira-strip)) {
+    padding-bottom: 1.25rem;
+  }
+
+  /* Cards with Jira strip - the strip handles bottom */
+  .card:has(.jira-strip) {
+    padding-bottom: 0;
+  }
+
+  /* Fallback for browsers without :has() */
+  @supports not selector(:has(*)) {
+    .card {
+      padding-bottom: 1.25rem;
+    }
   }
 
   /* Staggered entrance */
@@ -1934,11 +1968,12 @@
      ═══════════════════════════════════════════════════════════════════════════ */
   .status-strip {
     width: 4px;
-    border-radius: 0 4px 4px 0;
+    border-radius: var(--radius) 0 0 var(--radius);
     position: absolute;
     left: 0;
-    top: 0;
-    bottom: 0;
+    top: -1px;
+    bottom: -1px;
+    z-index: 2;
   }
 
   .status-open {
@@ -2196,15 +2231,17 @@
      JIRA FOOTER STRIP
      ═══════════════════════════════════════════════════════════════════════════ */
   .jira-strip {
-    margin: 0.5rem -1.25rem -1.25rem -1.5rem;
-    padding: 0.75rem 1.25rem 0.75rem 1.5rem;
+    margin: 0.75rem -1.25rem 0 -1.5rem;
+    padding: 0.75rem 1.25rem 0.85rem 1.5rem;
     background: linear-gradient(90deg, rgba(0, 245, 255, 0.05) 0%, rgba(191, 0, 255, 0.03) 100%);
     border-top: 1px solid rgba(0, 245, 255, 0.15);
+    border-radius: 0 0 var(--radius) var(--radius);
     position: relative;
     display: flex;
     align-items: center;
     gap: 0.5rem;
     flex-wrap: wrap;
+    margin-top: auto;
   }
 
   /* Glowing accent line */
