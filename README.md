@@ -76,6 +76,8 @@ PRDASH_JIRA_STATUS_MERGED=Ready for QA,QA,In QA,Released,Done,Closed,Production
 #   ExternalCommunications: external-communication
 #   GenRev: ds-genrev
 # Env fallback (comma-separated pairs): PRDASH_JIRA_COMPONENT_REPO_MAP=ExternalCommunications:external-communication,GenRev:ds-genrev
+# Optional: transition map for multi-step Jira moves (YAML file)
+# jira_transition_map_file: docs/jira_workflow_transitions.yml
 ```
 The title must contain a ticket key (e.g., `ABC-123`); Jira calls are skipped entirely if these aren’t set.
 

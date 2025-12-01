@@ -1848,6 +1848,7 @@
   .grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+    align-items: stretch;
     gap: 1rem;
   }
 
@@ -1875,6 +1876,7 @@
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     overflow: hidden;
     animation: card-enter 0.4s ease-out both;
+    height: 100%;
   }
 
   /* Staggered entrance */

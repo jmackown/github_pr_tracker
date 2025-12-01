@@ -190,7 +190,7 @@
                       hx-target="#pr-table-container"
                       hx-swap="innerHTML"
                       hx-indicator="#{{ status_indicator }}"
-                      hx-disabled-elt="this"
+                      hx-on::before-request="this.disabled=true"
                       hx-headers='{"X-Requested-With": "XMLHttpRequest"}'
                     >
                       Set to {{ expected_jira|first }}
@@ -207,7 +207,7 @@
                       hx-target="#pr-table-container"
                       hx-swap="innerHTML"
                       hx-indicator="#{{ comp_indicator }}"
-                      hx-disabled-elt="this"
+                      hx-on::before-request="this.disabled=true"
                       hx-headers='{"X-Requested-With": "XMLHttpRequest"}'
                     >
                       Add repo component

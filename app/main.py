@@ -178,22 +178,6 @@ async def apply_transition_by_name(key: str, transitions: list[dict], name: str)
 
 
 def hardcoded_path(target: str):
-    target_lower = target.lower()
-    if target_lower == "in review":
-        return [
-            ("awaiting refinement", "451", "Ready for Development"),
-            ("ready for dev", "461", "Add to Cycle/Sprint"),
-            ("awaiting development", "21", "Start Development"),
-            ("in development", "491", "In Review"),
-        ]
-    if target_lower == "awaiting qa":
-        return [
-            ("awaiting refinement", "451", "Ready for Development"),
-            ("ready for dev", "461", "Add to Cycle/Sprint"),
-            ("awaiting development", "21", "Start Development"),
-            ("in development", "491", "In Review"),
-            ("in review", "611", "No design review necessary"),
-        ]
     return []
 
 
@@ -262,7 +246,6 @@ async def jira_transition(
 
             # Candidate steps: hardcoded path + configured transitions_into + path_to_in_review (if applicable)
             candidate_steps = []
-            candidate_steps.extend([{"from": a, "id": b, "via": c} for a, b, c in hc_path])
             for tgt, step_list in trans_map.items():
                 candidate_steps.extend(step_list)
             if target.lower() == "in review" and path_map:
