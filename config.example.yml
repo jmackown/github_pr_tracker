@@ -17,5 +17,5 @@ jira_component_repo_map:
 jira_status_needs_review: In Review
 jira_status_draft: In Development
 jira_status_reviewed: In Review
-jira_status_merged: Ready for QA,QA,In QA,Released,Done,Closed,Production
+jira_status_merged: Awaiting QA
 jira_transition_map_file: docs/jira_workflow_transitions.yml

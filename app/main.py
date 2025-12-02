@@ -8,12 +8,13 @@ from fastapi.templating import Jinja2Templates
 import click
 import uvicorn
 from sqlalchemy import select
+from sqlalchemy.exc import OperationalError
 from sqlalchemy.ext.asyncio import AsyncSession
 import yaml
 
 from .db import SessionLocal, init_db, PullRequest
 from .config import settings
-from .polling import poll_loop, match_components
+from .polling import poll_loop, match_components, match_assignee
 from .jira_client import (
     fetch_jira_issue,
     fetch_jira_transitions,
@@ -190,6 +191,7 @@ async def refresh_pr_jira(session: AsyncSession, key: str, issue: dict | None):
     if not pr_obj:
         return
     comps = issue.get("components") or []
+    assignee, assignee_match = match_assignee(issue)
     pr_obj.jira_status = issue.get("status")
     pr_obj.jira_summary = issue.get("summary")
     pr_obj.jira_url = issue.get("url")
@@ -198,7 +200,93 @@ async def refresh_pr_jira(session: AsyncSession, key: str, issue: dict | None):
     pr_obj.jira_components_match = match_components(
         {"repo_name": pr_obj.repo_name}, comps
     )
+    pr_obj.jira_assignee = assignee
+    pr_obj.jira_assignee_match = assignee_match
+    if pr_obj.raw is None:
+        pr_obj.raw = {}
     pr_obj.raw["jira_components"] = comps
+
+
+async def render_pr_table(
+    request: Request,
+    jira_key: str | None = None,
+    issue: dict | None = None,
+    pending_status: str | None = None,
+    skip_db_write: bool = False,
+):
+    async with SessionLocal() as session:
+        if jira_key and not skip_db_write:
+            if issue is None:
+                issue = await fetch_jira_issue(jira_key)
+            await refresh_pr_jira(session, jira_key, issue)
+            await commit_with_retry(session)
+        groups, last_sync = await load_pr_groups(session)
+
+        # Apply optimistic/pending status directly to the response (no DB write)
+        if jira_key and (issue or pending_status):
+            for _, items in groups:
+                for pr in items:
+                    if pr.jira_key != jira_key:
+                        continue
+                    if issue:
+                        comps = issue.get("components") or []
+                        assignee, assignee_match = match_assignee(issue)
+                        pr.jira_status = issue.get("status") or pr.jira_status
+                        pr.jira_summary = issue.get("summary") or pr.jira_summary
+                        pr.jira_url = issue.get("url") or pr.jira_url
+                        pr.jira_last_synced_at = datetime.utcnow()
+                        pr.jira_components = comps
+                        pr.jira_components_match = match_components(
+                            {"repo_name": pr.repo_name}, comps
+                        )
+                        pr.jira_assignee = assignee
+                        pr.jira_assignee_match = assignee_match
+                    if pending_status:
+                        pr.jira_status = f"{pending_status} (pending)"
+
+        last_sync_str = format_ts(last_sync)
+    return templates.TemplateResponse(
+        "_pr_table.html",
+        {
+            "request": request,
+            "groups": groups,
+            "now": datetime.utcnow(),
+            "settings": settings,
+            "last_sync": last_sync,
+            "last_sync_str": last_sync_str,
+        },
+    )
+
+
+async def commit_with_retry(session: AsyncSession, attempts: int = 3, delay: float = 0.3) -> None:
+    for idx in range(attempts):
+        try:
+            await session.commit()
+            return
+        except OperationalError as exc:
+            msg = str(exc).lower()
+            await session.rollback()
+            if "database is locked" in msg and idx < attempts - 1:
+                await asyncio.sleep(delay * (idx + 1))
+                continue
+            raise
+
+
+async def fetch_issue_with_retry(key: str, expected_statuses: list[str] | None = None) -> dict | None:
+    attempts = 4
+    delay = 0.6
+    expected_lower = [s.lower() for s in expected_statuses or []]
+
+    for i in range(attempts):
+        issue = await fetch_jira_issue(key)
+        if not issue:
+            return None
+        status = (issue.get("status") or "").lower()
+        if not expected_lower or status in expected_lower:
+            return issue
+        if i < attempts - 1:
+            await asyncio.sleep(delay)
+    return issue
 
 
 @app.post("/jira/{key}/transition")
@@ -226,7 +314,7 @@ async def jira_transition(
 
     transitions = await fetch_jira_transitions(key)
     transition_id = pick_transition(transitions, targets)
-    issue = await fetch_jira_issue(key)
+    issue = await fetch_issue_with_retry(key, targets)
     current_status = (issue or {}).get("status")
     print(f"[jira] transition {key}: current={current_status}, target={targets}, direct_id={transition_id}")
 
@@ -242,7 +330,7 @@ async def jira_transition(
                 print(f"[jira] applying direct transition {transition_id} to {targets}")
                 if not await transition_jira_issue(key, transition_id):
                     raise HTTPException(status_code=500, detail="Transition failed")
-                issue = await fetch_jira_issue(key)
+                issue = await fetch_issue_with_retry(key, targets)
                 break
 
             # Candidate steps: hardcoded path + configured transitions_into + path_to_in_review (if applicable)
@@ -275,29 +363,16 @@ async def jira_transition(
                 if not await apply_transition_by_name(key, transitions, via):
                     raise HTTPException(status_code=400, detail=f"Cannot apply step {via}")
 
-            issue = await fetch_jira_issue(key)
+            issue = await fetch_issue_with_retry(key, targets)
             current_status = (issue or {}).get("status", current_status)
     else:
         print(f"[jira] applying direct transition {transition_id} to {targets}")
         if not await transition_jira_issue(key, transition_id):
             raise HTTPException(status_code=500, detail="Transition failed")
-        issue = await fetch_jira_issue(key)
+        issue = await fetch_issue_with_retry(key, targets)
 
-    # Render with live Jira data; persistence will be handled by the poller
-    groups, last_sync = [], None
-    async with SessionLocal() as session:
-        groups, last_sync = await load_pr_groups(session)
-        last_sync_str = format_ts(last_sync)
-    return templates.TemplateResponse(
-        "_pr_table.html",
-        {
-            "request": request,
-            "groups": groups,
-            "now": datetime.utcnow(),
-            "settings": settings,
-            "last_sync": last_sync,
-            "last_sync_str": last_sync_str,
-        },
+    return await render_pr_table(
+        request, jira_key=key, issue=issue, pending_status=target, skip_db_write=True
     )
 
 
@@ -333,21 +408,7 @@ async def jira_fix_components(
     existing = issue.get("components") or []
     missing = [c for c in desired if c.lower() not in [e.lower() for e in existing]]
     if not missing:
-        # Nothing to do; return current table
-        async with SessionLocal() as session:
-            groups, last_sync = await load_pr_groups(session)
-            last_sync_str = format_ts(last_sync)
-        return templates.TemplateResponse(
-            "_pr_table.html",
-            {
-                "request": request,
-                "groups": groups,
-                "now": datetime.utcnow(),
-                "settings": settings,
-                "last_sync": last_sync,
-                "last_sync_str": last_sync_str,
-            },
-        )
+        return await render_pr_table(request, jira_key=key, issue=issue)
 
     project_components = await fetch_project_components(project_key)
     name_to_id = {c.get("name", "").lower(): c.get("id") for c in project_components}
@@ -359,21 +420,8 @@ async def jira_fix_components(
     if not ok:
         raise HTTPException(status_code=500, detail="Failed to add components")
 
-    # Render with live Jira data; persistence will be handled by the poller
-    async with SessionLocal() as session:
-        groups, last_sync = await load_pr_groups(session)
-        last_sync_str = format_ts(last_sync)
-    return templates.TemplateResponse(
-        "_pr_table.html",
-        {
-            "request": request,
-            "groups": groups,
-            "now": datetime.utcnow(),
-            "settings": settings,
-            "last_sync": last_sync,
-            "last_sync_str": last_sync_str,
-        },
-    )
+    updated_issue = await fetch_jira_issue(key)
+    return await render_pr_table(request, jira_key=key, issue=updated_issue)
 
 
 @app.post("/jira/{key}/assign")
@@ -394,21 +442,8 @@ async def jira_assign(
     if not await assign_issue(key):
         raise HTTPException(status_code=500, detail="Failed to assign (check Jira logs)")
 
-    # Render with refreshed data
-    async with SessionLocal() as session:
-        groups, last_sync = await load_pr_groups(session)
-        last_sync_str = format_ts(last_sync)
-    return templates.TemplateResponse(
-        "_pr_table.html",
-        {
-            "request": request,
-            "groups": groups,
-            "now": datetime.utcnow(),
-            "settings": settings,
-            "last_sync": last_sync,
-            "last_sync_str": last_sync_str,
-        },
-    )
+    issue = await fetch_jira_issue(key)
+    return await render_pr_table(request, jira_key=key, issue=issue)
 
 
 @click.command()

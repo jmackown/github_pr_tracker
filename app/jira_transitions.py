@@ -2,6 +2,23 @@ from typing import List, Optional
 
 from .config import settings
 
+ALLOWED_TARGETS = {"in development", "in review", "awaiting qa"}
+
+
+def _filter_allowed(statuses: List[str], fallback: List[str]) -> List[str]:
+    seen = set()
+    allowed = []
+    for s in statuses:
+        if not s:
+            continue
+        lower = s.lower()
+        if lower in ALLOWED_TARGETS and lower not in seen:
+            allowed.append(s)
+            seen.add(lower)
+    if allowed:
+        return allowed
+    return fallback
+
 
 def expected_statuses_for_lane(title: str, is_draft: bool) -> List[str]:
     """
@@ -9,15 +26,17 @@ def expected_statuses_for_lane(title: str, is_draft: bool) -> List[str]:
     """
     if title == "My PRs that need review":
         if is_draft:
-            return settings.jira_status_list(settings.jira_status_draft, ["In Development"])
-        return settings.jira_status_list(settings.jira_status_needs_review, ["In Review"])
+            draft = settings.jira_status_list(settings.jira_status_draft, [])
+            return _filter_allowed(draft, [])
+        needs_review = settings.jira_status_list(settings.jira_status_needs_review, [])
+        return _filter_allowed(needs_review, [])
     if title == "My PRs that have been reviewed":
-        return settings.jira_status_list(settings.jira_status_reviewed, ["In Review"])
+        reviewed = settings.jira_status_list(settings.jira_status_reviewed, [])
+        return _filter_allowed(reviewed, [])
     if title.startswith("Merged PRs"):
-        return settings.jira_status_list(
-            settings.jira_status_merged,
-            ["Ready for QA", "QA", "In QA", "Released", "Done", "Closed", "Production"],
-        )
+        merged = settings.jira_status_list(settings.jira_status_merged, [])
+        merged = _filter_allowed(merged, [])
+        return merged
     return []
 
 
